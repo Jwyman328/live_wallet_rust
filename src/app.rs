@@ -1,8 +1,7 @@
-use egui::{Color32, RichText};
-
 use crate::pages::create_wallet::render_create_wallet_page;
 use crate::pages::home::render_home_page;
 use crate::types::wallet_import::WalletImport;
+use egui_toast::Toasts;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -15,6 +14,9 @@ pub struct TemplateApp {
     pub value: f32,
     pub page: Page,
     pub wallet: Option<WalletImport>,
+
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    pub toasts: Toasts,
 }
 
 impl Default for TemplateApp {
@@ -25,6 +27,9 @@ impl Default for TemplateApp {
             value: 2.7,
             page: Page::Home,
             wallet: None,
+            toasts: Toasts::new()
+                .anchor(egui::Align2::RIGHT_TOP, (20.0, 20.0))
+                .direction(egui::Direction::BottomUp),
         }
     }
 }

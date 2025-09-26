@@ -7,11 +7,16 @@ use crate::types::wallet_import::WalletImport;
 use serde_json;
 
 use egui::{Align, Button, Color32, Layout, RichText, vec2};
+use egui_toast::{Toast, ToastKind, ToastOptions, ToastStyle, Toasts};
 use rfd;
 
 pub fn render_home_page(app: &mut TemplateApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
         // The central panel the region left after adding TopPanel's and SidePanel's
+
+        // Show toasts on this frame
+        app.toasts.show(ctx);
+
         let heading = ui.label(
             RichText::new("Live Wallet")
                 .size(50.0)
@@ -37,7 +42,7 @@ pub fn render_home_page(app: &mut TemplateApp, ctx: &egui::Context) {
                         .set_title("Import wallet")
                         .pick_file();
 
-                    handle_import_wallet_file(path_buf);
+                    handle_import_wallet_file(path_buf, app);
                 }
 
                 // Button 2: Create Wallet
@@ -86,21 +91,29 @@ fn handle_import_wallet_file(path: Option<PathBuf>, app: &mut TemplateApp) {
         }
     };
     match std::fs::read_to_string(path) {
-        Ok(json_content) => {
-            match serde_json::from_str::<WalletImport>(&json_content) {
-                Ok(wallet) => {
-                    // Do something with the imported wallet
-                    println!("Wallet imported successfully {}", &json_content);
-                    app.page = Page::CreateWallet;
-                    // todo navigate to create_wallet_page but pass in all this data
-                }
-                Err(e) => {
-                    println!("Failed to parse JSON: {}", e);
-                }
+        Ok(json_content) => match serde_json::from_str::<WalletImport>(&json_content) {
+            Ok(wallet) => {
+                app.wallet = Some(wallet);
+                app.page = Page::CreateWallet;
             }
-        }
+            Err(e) => {
+                println!("Failed to parse JSON: {}", e);
+                app.toasts.add(Toast {
+                    kind: ToastKind::Error,
+                    text: format!("Failed to import wallet: {}\n\nPlease try again", e).into(),
+                    options: ToastOptions::default().duration_in_seconds(50.0),
+                    style: ToastStyle::default(),
+                });
+            }
+        },
         Err(e) => {
             println!("Failed to read file: {}", e);
+            app.toasts.add(Toast {
+                kind: ToastKind::Error,
+                text: format!("Failed to read file : {} /n/nPlease try again", e).into(),
+                options: ToastOptions::default().duration_in_seconds(50.0),
+                style: ToastStyle::default(),
+            });
         }
     }
 }
